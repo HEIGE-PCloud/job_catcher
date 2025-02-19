@@ -126,15 +126,3 @@ with open("false_negatives.txt", "w") as fn_file:
 print(f"Saved {len(false_positives)} false positives in false_positives.txt")
 print(f"Saved {len(false_negatives)} false negatives in false_negatives.txt")
 
-# Accuracy: 0.9851373182552504
-# Confusion matrix:
-#  [[2943   15]
-#  [  31  106]]
-#               precision    recall  f1-score   support
-
-#            0       0.99      0.99      0.99      2958
-#            1       0.88      0.77      0.82       137
-
-#     accuracy                           0.99      3095
-#    macro avg       0.93      0.88      0.91      3095
-# weighted avg       0.98      0.99      0.98      3095
