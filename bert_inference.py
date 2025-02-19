@@ -1,33 +1,42 @@
+from pathlib import Path
+from tqdm import tqdm
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import torch
+import util
+from sklearn.metrics import confusion_matrix, accuracy_score, classification_report
+
+def evaluate(y_test, y_pred):
+  print(f'Accuracy: {accuracy_score(y_test, y_pred)}')
+  print(f'Confusion matrix:\n {confusion_matrix(y_test, y_pred)}')
+  print(f"{classification_report(y_test, y_pred)}")
 
 model_name = "pcloud/job_catcher-bert-base-uncased"
+MAX_LENGTH = 512
+
+# Set device to "mps" if available, otherwise use CPU
+device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
+print(f"Using device: {device}")
 
 # Load model and tokenizer from Hugging Face Hub
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSequenceClassification.from_pretrained(model_name)
-# Set model to evaluation mode
+model.to(device)  # Move the model to the device
 model.eval()
-MAX_LENGTH = 512
-def predict(job_text, model, tokenizer):
-    tokens = tokenizer.tokenize(job_text)  # Get the list of tokens BEFORE truncation
-    
-    if len(tokens) > MAX_LENGTH:
-        print(f"⚠️ Warning: Input text truncated from {len(tokens)} to {MAX_LENGTH} tokens.")
 
+def predict(job_text, model, tokenizer, device):
     inputs = tokenizer(
         job_text,
         truncation=True,
         padding=False,
         max_length=MAX_LENGTH,
         return_tensors="pt"
-    )
+    ).to(device)  # Move input tensors to the device
     with torch.no_grad():
         outputs = model(**inputs)
 
     logits = outputs.logits
     prediction = torch.argmax(logits, dim=-1).item()  # 0 = Real, 1 = Fake
-    return "Fake Job Posting" if prediction == 1 else "Real Job Posting"
+    return prediction
 
 # Example usage:
 new_job_posting = """
@@ -80,5 +89,46 @@ Upon selection, you will be required to complete a background verification proce
 
 **Apply now and take the first step toward a rewarding career with Global Solutions Inc.!**
 """
-result = predict(new_job_posting, model, tokenizer)
-print(result)
+result = predict(new_job_posting, model, tokenizer, device)
+print(f"Prediction: {'Fake' if result == 1 else 'Real'}")
+
+df = util.load_data(Path("data/fake_job_postings.csv"))
+X_train, X_test, y_train, y_test = util.split_data(df)
+
+# Get predictions for the test set using the device
+predictions = []
+for text in tqdm(X_test):
+    prediction = predict(text, model, tokenizer, device)
+    predictions.append(prediction)
+
+evaluate(y_test, predictions)
+# Save false positive and false negative job postings to files.
+
+# False positive: predicted Fake (1) but actually Real (0)
+# False negative: predicted Real (0) but actually Fake (1)
+false_positives = [
+    text for text, truth, pred in zip(X_test, y_test, predictions)
+    if truth == 0 and pred == 1
+]
+false_negatives = [
+    text for text, truth, pred in zip(X_test, y_test, predictions)
+    if truth == 1 and pred == 0
+]
+
+with open("false_positives.txt", "w") as fp_file:
+    for job in false_positives:
+        fp_file.write(job + "\n ================= \n")
+
+with open("false_negatives.txt", "w") as fn_file:
+    for job in false_negatives:
+        fn_file.write(job + "\n ================= \n")
+
+print(f"Saved {len(false_positives)} false positives in false_positives.txt")
+print(f"Saved {len(false_negatives)} false negatives in false_negatives.txt")
+
+# Confusion Matrix:
+# [[2943   15]
+#  [  31  106]]
+# Precision: 0.876
+# Recall: 0.774
+# F1 Score: 0.822
