@@ -8,7 +8,7 @@ def load_data(path: Path) -> pd.DataFrame:
     data = pd.DataFrame(
         {
             "job_description": data[
-                ["company_profile", "description", "requirements", "benefits"]
+                ["title", "location", "department", "salary_range", "company_profile", "description", "requirements", "benefits"]
             ]
             .fillna("")
             .agg(" ".join, axis=1),
