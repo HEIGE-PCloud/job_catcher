@@ -29,4 +29,11 @@ if __name__ == "__main__":
         'fraudulent': 1
     })
 
+    # Try to read existing CSV file, if it exists
+    try:
+        existing_df = pd.read_csv('data/gpt-4o-mini-fake_job_postings.csv')
+        df = pd.concat([existing_df, df], ignore_index=True)
+    except FileNotFoundError:
+        pass
+
     df.to_csv('data/gpt-4o-mini-fake_job_postings.csv', index=False)
