@@ -1,8 +1,11 @@
 import openai
+import pandas as pd
+from tqdm import tqdm
+
 
 client = openai.OpenAI()
 
-if __name__ == "__main__":
+def create_fake_job_posting():
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
@@ -14,5 +17,16 @@ if __name__ == "__main__":
         ],
         temperature=0.8
     )
+    return response.choices[0].message.content
 
-    print(response.choices[0].message.content)
+if __name__ == "__main__":
+    job_descriptions = []
+    for _ in tqdm(range(1)):
+        job_descriptions.append(create_fake_job_posting())
+
+    df = pd.DataFrame({
+        'job_description': job_descriptions,
+        'fraudulent': 1
+    })
+
+    df.to_csv('data/gpt-4o-mini-fake_job_postings.csv', index=False)
