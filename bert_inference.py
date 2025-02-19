@@ -8,16 +8,20 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSequenceClassification.from_pretrained(model_name)
 # Set model to evaluation mode
 model.eval()
-
+MAX_LENGTH = 512
 def predict(job_text, model, tokenizer):
+    tokens = tokenizer.tokenize(job_text)  # Get the list of tokens BEFORE truncation
+    
+    if len(tokens) > MAX_LENGTH:
+        print(f"⚠️ Warning: Input text truncated from {len(tokens)} to {MAX_LENGTH} tokens.")
+
     inputs = tokenizer(
         job_text,
         truncation=True,
         padding=False,
-        max_length=512,
+        max_length=MAX_LENGTH,
         return_tensors="pt"
     )
-
     with torch.no_grad():
         outputs = model(**inputs)
 
