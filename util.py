@@ -1,4 +1,6 @@
 from pathlib import Path
+import re
+import string
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
@@ -17,6 +19,18 @@ def load_data(path: Path) -> pd.DataFrame:
     )
     data = data.drop_duplicates(subset=["job_description"], keep="first")
     return data
+
+def clean_text(text):
+    '''Make text lowercase, remove text in square brackets,remove links,remove punctuation
+    and remove words containing numbers.'''
+    text = text.lower()
+    text = re.sub('\[.*?\]', '', text)
+    text = re.sub('https?://\S+|www\.\S+', '', text)
+    text = re.sub('<.*?>+', '', text)
+    text = re.sub('[%s]' % re.escape(string.punctuation), '', text)
+    text = re.sub('\n', '', text)
+    text = re.sub('\w*\d\w*', '', text)
+    return text
 
 
 def split_data(data: pd.DataFrame):
@@ -48,5 +62,10 @@ def split_data(data: pd.DataFrame):
     # Extract the oversampled X_train and y_train
     X_train: pd.Series[str] = train_df_oversampled['job_description']
     y_train: pd.Series[int] = train_df_oversampled['fraudulent']
+
+    # apply clean_text function to the training and test data
+
+    X_train = X_train.apply(clean_text)
+    X_test = X_test.apply(clean_text)
 
     return X_train, X_test, y_train, y_test
