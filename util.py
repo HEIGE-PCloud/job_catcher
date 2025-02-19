@@ -65,7 +65,7 @@ def split_data(data: pd.DataFrame):
 
     # apply clean_text function to the training and test data
 
-    X_train = X_train.apply(clean_text)
-    X_test = X_test.apply(clean_text)
+    # X_train = X_train.apply(clean_text)
+    # X_test = X_test.apply(clean_text)
 
     return X_train, X_test, y_train, y_test
